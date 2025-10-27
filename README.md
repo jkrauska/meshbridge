@@ -46,13 +46,6 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv pip install -r requirements.txt
 ```
 
-**Using pip:**
-```bash
-python3 -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
-
 ## Quick Start
 
 ### YOLO Mode (Fastest!)
@@ -81,29 +74,9 @@ This will:
 5. Announce the bridge via mDNS (e.g., `meshtastic_9d4e.local`)
 6. Manage multiple bridges simultaneously
 
-## Manual Usage (Shell Scripts)
-
-### Find Your Device
-
-```bash
-./find-device.sh
-```
-
-### Start the Bridge
-
-```bash
-./bridge.sh /dev/ttyUSB0
-```
-
-Or specify a custom port:
-
-```bash
-./bridge.sh /dev/ttyUSB0 4403
-```
-
 ### Connect a Client
 
-Point your Meshtastic client to `localhost:4403` or `<hostname>:4403` from another machine.
+Point your Meshtastic client to your mdns name  (e.g., `meshtastic_9d4e.local`) or `localhost:4403` or `<hostname>:4403` from another machine.
 
 ## How It Works
 
