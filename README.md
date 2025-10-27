@@ -1,6 +1,8 @@
 # Meshtastic Serial Bridge
 
-A simple socat-based bridge to expose serial Meshtastic devices over TCP.
+A simple socat-based bridge to expose serial attached Meshtastic devices over TCP.
+
+Great for using a PiZero to manage a node and present it over WiFi to your phone or computer. (my use case)
 
 ## Overview
 
@@ -8,19 +10,19 @@ This bridge allows you to connect to a USB-connected Meshtastic device over the 
 
 ```
 ┌──────────────┐  TCP 4403         ┌───────────────┐
-│ MeshMonitor  │ ←────────────────→│ Serial Bridge │
-│ or Client    │                   └───────┬───────┘
-└──────────────┘                           │ Serial
-                                    ┌───────▼───────┐
-                                    │  Meshtastic   │
-                                    │   USB Device  │
-                                    └───────────────┘
+│  Client App  │ ←────────────────→│ Serial Bridge │
+│              │                   └───────┬───────┘
+└──────────────┘                           │ Serial/USB
+                                   ┌───────▼───────┐
+                                   │  Meshtastic   │
+                                   │   USB Device  │
+                                   └───────────────┘
 ```
 
 ## Requirements
 
 - `socat` - Install via `brew install socat` (macOS) or `apt-get install socat` (Linux)
-- Python 3.6+ (for interactive manager)
+- Python (for interactive manager)
 - A serial Meshtastic device connected via USB
 
 ## Installation
@@ -32,7 +34,7 @@ This bridge allows you to connect to a USB-connected Meshtastic device over the 
 brew install socat
 ```
 
-**Linux:**
+**Linux: (debian example)**
 ```bash
 sudo apt-get install socat
 ```
@@ -42,7 +44,7 @@ sudo apt-get install socat
 **Using uv (recommended):**
 ```bash
 uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate # macOS/Linux
 uv pip install -r requirements.txt
 ```
 

@@ -5,18 +5,18 @@ Meshtastic Serial Bridge Manager
 Interactive tool to discover and bridge serial Meshtastic devices to TCP
 """
 
-import os
 import sys
 import glob
 import subprocess
 import signal
 import time
 import re
-from typing import List, Dict, Optional
+from typing import List, Optional
 
 # Try to import meshtastic library
 try:
     import meshtastic.serial_interface
+
     MESHTASTIC_AVAILABLE = True
 except ImportError:
     MESHTASTIC_AVAILABLE = False
@@ -25,23 +25,28 @@ except ImportError:
 try:
     from zeroconf import ServiceInfo, Zeroconf
     import socket
+
     ZEROCONF_AVAILABLE = True
 except ImportError:
     ZEROCONF_AVAILABLE = False
 
+
 class Colors:
     """ANSI color codes for terminal output"""
-    HEADER = '\033[95m'
-    BLUE = '\033[94m'
-    CYAN = '\033[96m'
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    RED = '\033[91m'
-    END = '\033[0m'
-    BOLD = '\033[1m'
+
+    HEADER = "\033[95m"
+    BLUE = "\033[94m"
+    CYAN = "\033[96m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    END = "\033[0m"
+    BOLD = "\033[1m"
+
 
 class SerialDevice:
     """Represents a serial device"""
+
     def __init__(self, path: str, description: str = "", node_name: str = ""):
         self.path = path
         self.description = description
@@ -58,8 +63,10 @@ class SerialDevice:
             return f"{parts[0]} ({', '.join(parts[1:])})"
         return parts[0]
 
+
 class Bridge:
     """Manages a socat bridge process with optional mDNS announcement"""
+
     def __init__(self, device: str, port: int, node_id: str = None, baud: int = 115200):
         self.device = device
         self.port = port
@@ -79,15 +86,14 @@ class Bridge:
             # Start socat bridge
             socat_cmd = [
                 "socat",
-                "-d", "-d",
+                "-d",
+                "-d",
                 f"TCP-LISTEN:{self.port},reuseaddr,fork",
-                f"OPEN:{self.device},nonblock=1"
+                f"OPEN:{self.device},nonblock=1",
             ]
 
             self.process = subprocess.Popen(
-                socat_cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
+                socat_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
 
             # Start mDNS announcement if available
@@ -104,7 +110,7 @@ class Bridge:
         try:
             # Extract short node ID (last 4 chars) for hostname
             # e.g., !3c7f9d4e -> 9d4e
-            short_id = self.node_id.replace('!', '')[-4:]
+            short_id = self.node_id.replace("!", "")[-4:]
             hostname = f"meshtastic_{short_id}.local."
 
             # Get local IP address
@@ -122,8 +128,8 @@ class Bridge:
                 addresses=[socket.inet_aton(local_ip)],
                 port=self.port,
                 properties={
-                    'node_id': self.node_id,
-                    'device': self.device,
+                    "node_id": self.node_id,
+                    "device": self.device,
                 },
                 server=hostname,
             )
@@ -158,6 +164,7 @@ class Bridge:
         """Check if bridge is running"""
         return self.process is not None and self.process.poll() is None
 
+
 def check_dependencies() -> bool:
     """Check if required tools are installed"""
     socat_ok = True
@@ -172,18 +179,25 @@ def check_dependencies() -> bool:
         socat_ok = False
 
     if not MESHTASTIC_AVAILABLE:
-        print(f"{Colors.YELLOW}Note: meshtastic library not found - device names will not be shown{Colors.END}")
-        print(f"Install with: pip install meshtastic")
+        print(
+            f"{Colors.YELLOW}Note: meshtastic library not found - device names will not be shown{Colors.END}"
+        )
+        print("Install with: pip install meshtastic")
         print()
 
     if not ZEROCONF_AVAILABLE:
-        print(f"{Colors.YELLOW}Note: zeroconf library not found - mDNS announcements disabled{Colors.END}")
-        print(f"Install with: pip install zeroconf")
+        print(
+            f"{Colors.YELLOW}Note: zeroconf library not found - mDNS announcements disabled{Colors.END}"
+        )
+        print("Install with: pip install zeroconf")
         print()
 
     return socat_ok
 
-def query_meshtastic_info(device_path: str, timeout: int = 10, verbose: bool = False) -> Optional[str]:
+
+def query_meshtastic_info(
+    device_path: str, timeout: int = 10, verbose: bool = False
+) -> Optional[str]:
     """Try to query the device for its Meshtastic node ID and owner"""
     if not MESHTASTIC_AVAILABLE:
         return None
@@ -194,7 +208,7 @@ def query_meshtastic_info(device_path: str, timeout: int = 10, verbose: bool = F
             devPath=device_path,
             noProto=False,
             debugOut=None,  # Suppress debug output
-            noNodes=True  # Don't download node database
+            noNodes=True,  # Don't download node database
         )
 
         # Poll for myInfo with timeout
@@ -202,9 +216,9 @@ def query_meshtastic_info(device_path: str, timeout: int = 10, verbose: bool = F
 
         while time.time() - start_time < timeout:
             # Get our node number and owner from myInfo
-            if hasattr(interface, 'myInfo') and interface.myInfo:
+            if hasattr(interface, "myInfo") and interface.myInfo:
                 my_info = interface.myInfo
-                if hasattr(my_info, 'my_node_num') and my_info.my_node_num:
+                if hasattr(my_info, "my_node_num") and my_info.my_node_num:
                     my_node_num = my_info.my_node_num
                     node_id = f"!{my_node_num:08x}"
 
@@ -212,17 +226,30 @@ def query_meshtastic_info(device_path: str, timeout: int = 10, verbose: bool = F
                     owner = None
 
                     # Check myInfo.user
-                    if hasattr(my_info, 'user') and my_info.user:
-                        if hasattr(my_info.user, 'longName') and my_info.user.longName:
+                    if hasattr(my_info, "user") and my_info.user:
+                        if hasattr(my_info.user, "longName") and my_info.user.longName:
                             owner = my_info.user.longName
-                        elif hasattr(my_info.user, 'shortName') and my_info.user.shortName:
+                        elif (
+                            hasattr(my_info.user, "shortName")
+                            and my_info.user.shortName
+                        ):
                             owner = my_info.user.shortName
 
                     # Check localConfig.owner if available
-                    if not owner and hasattr(interface, 'localNode') and interface.localNode:
-                        if hasattr(interface.localNode, 'owner') and interface.localNode.owner:
+                    if (
+                        not owner
+                        and hasattr(interface, "localNode")
+                        and interface.localNode
+                    ):
+                        if (
+                            hasattr(interface.localNode, "owner")
+                            and interface.localNode.owner
+                        ):
                             owner = interface.localNode.owner
-                        elif hasattr(interface.localNode, 'longName') and interface.localNode.longName:
+                        elif (
+                            hasattr(interface.localNode, "longName")
+                            and interface.localNode.longName
+                        ):
                             owner = interface.localNode.longName
 
                     # If we have owner info, return it; otherwise keep polling
@@ -249,36 +276,38 @@ def query_meshtastic_info(device_path: str, timeout: int = 10, verbose: bool = F
             print(f"{Colors.YELLOW}error: {e}{Colors.END}", end="", flush=True)
         return None
 
-def find_serial_devices(query_names: bool = True, skip_devices: set = None) -> List[SerialDevice]:
+
+def find_serial_devices(
+    query_names: bool = True, skip_devices: set = None
+) -> List[SerialDevice]:
     """Find potential serial devices"""
     devices = []
     skip_devices = skip_devices or set()
 
     # Skip devices that match this pattern (likely not Meshtastic)
     # Example: /dev/cu.usbmodemM4AE1CAEMD6 (long alphanumeric suffix)
-    skip_pattern = re.compile(r'/dev/cu\.usbmodem[A-Z0-9]{10,}')
+    skip_pattern = re.compile(r"/dev/cu\.usbmodem[A-Z0-9]{10,}")
 
     print(f"{Colors.BOLD}Searching for serial devices...{Colors.END}")
 
     if sys.platform == "darwin":
         # macOS - look for USB serial devices
-        patterns = [
-            "/dev/tty.usb*",
-            "/dev/cu.usb*",
-            "/dev/tty.SLAB*",
-            "/dev/cu.SLAB*"
-        ]
+        patterns = ["/dev/tty.usb*", "/dev/cu.usb*", "/dev/tty.SLAB*", "/dev/cu.SLAB*"]
 
         for pattern in patterns:
             for path in glob.glob(pattern):
                 # Skip devices with active bridges
                 if path in skip_devices:
-                    print(f"  {path}... {Colors.GREEN}skipped (bridge already active){Colors.END}")
+                    print(
+                        f"  {path}... {Colors.GREEN}skipped (bridge already active){Colors.END}"
+                    )
                     continue
 
                 # Skip devices matching the exclusion pattern
                 if skip_pattern.match(path):
-                    print(f"  {path}... {Colors.YELLOW}skipped due to excluded pattern match{Colors.END}")
+                    print(
+                        f"  {path}... {Colors.YELLOW}skipped due to excluded pattern match{Colors.END}"
+                    )
                     continue
 
                 # Prefer cu.* devices for macOS
@@ -293,10 +322,7 @@ def find_serial_devices(query_names: bool = True, skip_devices: set = None) -> L
                     devices.append(SerialDevice(path, desc))
     else:
         # Linux - look for USB serial devices
-        patterns = [
-            "/dev/ttyUSB*",
-            "/dev/ttyACM*"
-        ]
+        patterns = ["/dev/ttyUSB*", "/dev/ttyACM*"]
 
         for pattern in patterns:
             for path in glob.glob(pattern):
@@ -322,6 +348,7 @@ def find_serial_devices(query_names: bool = True, skip_devices: set = None) -> L
 
     return devices
 
+
 def get_next_available_port(start_port: int = 4403, bridges: List[Bridge] = []) -> int:
     """Find the next available port"""
     used_ports = {b.port for b in bridges if b.is_running()}
@@ -330,11 +357,13 @@ def get_next_available_port(start_port: int = 4403, bridges: List[Bridge] = []) 
         port += 1
     return port
 
+
 def print_header():
     """Print application header"""
     print(f"\n{Colors.BOLD}{Colors.CYAN}╔════════════════════════════════════════╗")
-    print(f"║    Meshtastic Serial Bridge Manager    ║")
+    print("║    Meshtastic Serial Bridge Manager    ║")
     print(f"╚════════════════════════════════════════╝{Colors.END}\n")
+
 
 def print_bridges(bridges: List[Bridge]):
     """Print active bridges"""
@@ -347,8 +376,13 @@ def print_bridges(bridges: List[Bridge]):
 
     print(f"\n{Colors.BOLD}Active Bridges:{Colors.END}")
     for i, bridge in enumerate(active_bridges, 1):
-        node_info = f" ({Colors.GREEN}{bridge.node_id}{Colors.END})" if bridge.node_id else ""
-        print(f"  {Colors.GREEN}[{i}]{Colors.END} {bridge.device}{node_info} → TCP port {bridge.port}")
+        node_info = (
+            f" ({Colors.GREEN}{bridge.node_id}{Colors.END})" if bridge.node_id else ""
+        )
+        print(
+            f"  {Colors.GREEN}[{i}]{Colors.END} {bridge.device}{node_info} → TCP port {bridge.port}"
+        )
+
 
 def yolo_mode():
     """YOLO mode - automatically bridge the first device found"""
@@ -405,7 +439,7 @@ def yolo_mode():
         print(f"  Connect to: localhost:{port}")
 
         if ZEROCONF_AVAILABLE and device.node_name:
-            short_id = device.node_name.replace('!', '')[-4:]
+            short_id = device.node_name.replace("!", "")[-4:]
             print(f"  mDNS: meshtastic_{short_id}.local:{port}")
 
         print(f"\n{Colors.CYAN}Bridge running. Press Ctrl+C to stop.{Colors.END}\n")
@@ -420,10 +454,11 @@ def yolo_mode():
         print(f"{Colors.RED}Failed to start bridge{Colors.END}")
         sys.exit(1)
 
+
 def main():
     """Main application loop"""
     # Check for --yolo flag
-    if len(sys.argv) > 1 and sys.argv[1] == '--yolo':
+    if len(sys.argv) > 1 and sys.argv[1] == "--yolo":
         yolo_mode()
         return
 
@@ -465,14 +500,16 @@ def main():
             print(f"  {Colors.CYAN}[r]{Colors.END} Refresh / search again")
             print(f"  {Colors.CYAN}[q]{Colors.END} Quit")
 
-            choice = input(f"\n{Colors.BOLD}Choose an option:{Colors.END} ").strip().lower()
+            choice = (
+                input(f"\n{Colors.BOLD}Choose an option:{Colors.END} ").strip().lower()
+            )
 
-            if choice == 'q':
+            if choice == "q":
                 for bridge in bridges:
                     if bridge.is_running():
                         bridge.stop()
                 sys.exit(0)
-            elif choice == 'r':
+            elif choice == "r":
                 need_scan = True
                 continue
             else:
@@ -487,8 +524,17 @@ def main():
         for i, device in enumerate(devices, 1):
             if device.path in active_device_paths:
                 # Find the bridge for this device
-                bridge_port = next((b.port for b in bridges if b.device == device.path and b.is_running()), None)
-                print(f"  {Colors.CYAN}[{i}]{Colors.END} {device} {Colors.GREEN}[Bridge active on port {bridge_port}]{Colors.END}")
+                bridge_port = next(
+                    (
+                        b.port
+                        for b in bridges
+                        if b.device == device.path and b.is_running()
+                    ),
+                    None,
+                )
+                print(
+                    f"  {Colors.CYAN}[{i}]{Colors.END} {device} {Colors.GREEN}[Bridge active on port {bridge_port}]{Colors.END}"
+                )
             else:
                 print(f"  {Colors.CYAN}[{i}]{Colors.END} {device}")
 
@@ -503,15 +549,15 @@ def main():
         # Get user choice
         choice = input(f"\n{Colors.BOLD}Choose an option:{Colors.END} ").strip().lower()
 
-        if choice == 'q':
+        if choice == "q":
             for bridge in bridges:
                 if bridge.is_running():
                     bridge.stop()
             sys.exit(0)
-        elif choice == 'r':
+        elif choice == "r":
             need_scan = True
             continue
-        elif choice == 's' and bridges:
+        elif choice == "s" and bridges:
             print(f"\n{Colors.YELLOW}Stopping all bridges...{Colors.END}")
             for bridge in bridges:
                 if bridge.is_running():
@@ -528,14 +574,25 @@ def main():
 
                 # Check if this device already has a bridge
                 if device.path in active_device_paths:
-                    existing_bridge = next((b for b in bridges if b.device == device.path and b.is_running()), None)
-                    print(f"\n{Colors.YELLOW}Bridge already running for this device on port {existing_bridge.port}{Colors.END}")
+                    existing_bridge = next(
+                        (
+                            b
+                            for b in bridges
+                            if b.device == device.path and b.is_running()
+                        ),
+                        None,
+                    )
+                    print(
+                        f"\n{Colors.YELLOW}Bridge already running for this device on port {existing_bridge.port}{Colors.END}"
+                    )
                     input("\nPress Enter to continue...")
                     continue
 
                 # Get port (auto-assign or custom)
                 default_port = get_next_available_port(bridges=bridges)
-                port_input = input(f"\n{Colors.BOLD}TCP Port [{default_port}]:{Colors.END} ").strip()
+                port_input = input(
+                    f"\n{Colors.BOLD}TCP Port [{default_port}]:{Colors.END} "
+                ).strip()
 
                 if port_input:
                     try:
@@ -560,10 +617,12 @@ def main():
                     print(f"  Connect to: localhost:{port}")
 
                     if ZEROCONF_AVAILABLE and device.node_name:
-                        short_id = device.node_name.replace('!', '')[-4:]
+                        short_id = device.node_name.replace("!", "")[-4:]
                         print(f"  mDNS: meshtastic_{short_id}.local:{port}")
 
-                    print(f"\n{Colors.CYAN}Bridge is now active. Returning to menu...{Colors.END}")
+                    print(
+                        f"\n{Colors.CYAN}Bridge is now active. Returning to menu...{Colors.END}"
+                    )
                     time.sleep(2)  # Brief pause to read the message
                     continue
                 else:
@@ -578,6 +637,7 @@ def main():
             print(f"{Colors.RED}Invalid option{Colors.END}")
             time.sleep(1)
             continue
+
 
 if __name__ == "__main__":
     main()
