@@ -1,4 +1,4 @@
-# Meshtastic Serial Bridge
+# Meshtastic Serial to TCP Bridge Manager
 
 A simple socat-based bridge to expose serial attached Meshtastic devices over TCP.
 
@@ -8,15 +8,14 @@ Great for using a PiZero to manage a node and present it over WiFi to your phone
 
 This bridge allows you to connect to a USB-connected Meshtastic device over the network using TCP port 4403 (the standard Meshtastic TCP port).
 
-```
-┌──────────────┐  TCP 4403         ┌───────────────┐
-│  Client App  │ ←────────────────→│ Serial Bridge │
-│              │                   └───────┬───────┘
-└──────────────┘                           │ Serial/USB
-                                   ┌───────▼───────┐
-                                   │  Meshtastic   │
-                                   │   USB Device  │
-                                   └───────────────┘
+```mermaid
+graph LR
+    A[Client App] <-->|TCP 4403| B[Serial Bridge]
+    B <-->|Serial/USB| C[Meshtastic<br/>USB Device]
+
+    style A fill:#e1f5ff
+    style B fill:#fff4e1
+    style C fill:#e8f5e9
 ```
 
 ## Requirements
