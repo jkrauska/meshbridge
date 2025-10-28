@@ -11,6 +11,7 @@ import subprocess
 import signal
 import time
 import re
+import platform
 from typing import List, Optional
 
 # Try to import meshtastic library
@@ -80,7 +81,9 @@ class Bridge:
         """Start the bridge and mDNS announcement"""
         try:
             # Set serial port parameters with stty
-            stty_cmd = ["stty", "-f", self.device, str(self.baud), "raw", "-echo"]
+            # Use -f on macOS/BSD, -F on Linux/GNU
+            flag = "-f" if platform.system() == "Darwin" else "-F"
+            stty_cmd = ["stty", flag, self.device, str(self.baud), "raw", "-echo"]
             subprocess.run(stty_cmd, check=True, capture_output=True)
 
             # Start socat bridge
